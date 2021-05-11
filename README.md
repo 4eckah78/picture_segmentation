@@ -1,1 +1,1 @@
-# picture_segmentation
+Here is the Finit Graphs educational project 
