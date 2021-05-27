@@ -1,96 +1,136 @@
-import numpy as np
-import time
-
-
 class Graph:
-    def __init__(self, path=""):
-        with open(path, 'r') as file:
-            self.data = file.read().split('\n')
-        self.V = int(self.data[0].split(' ')[0])
-        self.E = int(self.data[0].split(' ')[1])
-        self.capacity_matrix = np.zeros((self.V, self.V))
-        self.flow = np.zeros((self.V, self.V))
-        self.max_flow = 0
-        self.data.pop(0)
-        self.data.pop()
+
+    def __init__(self, table_x, table_y, table_capacity, height, width):
+        self.maxflow = 0
+        self.V = height * width + 2
+        self.E = len(table_x)
+        self.table_capacity = table_capacity
+        edges = list(zip(table_x, table_y, table_capacity))
+        self.list = {i: [] for i in range(self.V)}
+        for i in edges:
+            self.list[i[0]].append([i[1], i[2], 0])
         self.levels = []
-        for i in self.data:
-            self.capacity_matrix[int(i.split(' ')[0]) - 1, int(i.split(' ')[1]) - 1] = int(i.split(' ')[2])
 
     def bfs_with_levels(self):
         self.levels = [-1] * self.V
         self.levels[0] = 0
-
-        to_visit = [self.levels[0]]
-
+        to_visit = [0]
+        visited = set()
+        layered_list = {}
+        layered_list = layered_list.copy()
+        layered_reverse_list = {i: [] for i in range(self.V)}
+        print("BFS in progress")
         while to_visit:
             current = to_visit.pop(0)
-            for i in range(self.V):
-                if self.capacity_matrix[current, i] - self.flow[current, i] > 0 and self.levels[i] < 0:
-                    self.levels[i] = self.levels[current] + 1
-                    to_visit.append(i)
+            layered_list[current] = [v for v in self.list[current] if v[1] - v[2] > 0 and (self.levels[v[0]] < 0 or self.levels[v[0]] - self.levels[current] == 1)]
+            for i in layered_list[current]:
+                self.levels[i[0]] = self.levels[current] + 1
+                layered_reverse_list[i[0]].append([current, i[1], i[2]])
+                if i[0] not in visited:
+                    to_visit.append(i[0])
+                visited.add(current)
+                visited.add(i[0])
+        layered_reverse_list = {k: v for k, v in layered_reverse_list.items() if v != []}
+        return layered_list, layered_reverse_list
 
-    def find_augmenting_path(self, origin=0, max_flow=float('inf')):
-        if origin == self.V - 1:
-            return max_flow
-        for i in range(self.V):
-            if self.capacity_matrix[origin, i] - self.flow[origin, i] > 0 and self.levels[origin] + 1 == self.levels[i]:
-                current_flow = min(max_flow, self.capacity_matrix[origin, i] - self.flow[origin, i])
-                path_flow = self.find_augmenting_path(i, current_flow)
-                if path_flow > 0:
-                    self.flow[origin, i] += path_flow
-                    self.flow[i, origin] -= path_flow
-                    return path_flow
-        return 0
+    def right_clean(self, layered_list, layered_reverse_list, right_check_points):
+        while right_check_points:
+            i = right_check_points.pop()
+            if i in layered_list:
+                if len(layered_list[i]) == 0:
+                    for j in layered_reverse_list[i]:
+                        layered_list[j[0]].remove([i, j[1], j[2]])  # удаление всех исходящих в удаленную вершину ребер
+                        right_check_points.append(j[0])
+                    del layered_list[i]
+                    del layered_reverse_list[i]
+        return layered_list, layered_reverse_list
 
-    def alg_Dinitz(self):
-        self.max_flow = 0
-        while True:
-            self.bfs_with_levels()
-            if self.levels[self.V - 1] < 0:
-                return self.max_flow
-            while True:
-                path_flow = self.find_augmenting_path()
-                if path_flow == 0:
-                    break
-                self.max_flow += path_flow
+    def left_clean(self, layered_list, layered_reverse_list, left_check_points):
+        while left_check_points:
+            i = left_check_points.pop()
+            if i in layered_reverse_list:
+                if len(layered_reverse_list[i]) == 0:
+                    for j in layered_list[i]:
+                        layered_reverse_list[j[0]].remove([i, j[1], j[2]])
+                        left_check_points.append(j[0])
+                    del layered_list[i]
+                    del layered_reverse_list[i]
+        return layered_list, layered_reverse_list
 
-
-# # for i in range(1, 7):
-# #     graph = Graph("C:/Users/yuryp/Downloads/test_" + str(i) + ".txt")
-# #     start_time = time.time()
-# #     graph.alg_Dinitz()
-# #     print("test N ", i)
-# #     print("Work time = ", time.time() - start_time, "\n")
-# #     print("max flow = ", graph.max_flow)
-#
-# # for i in range(5, 6):
-# #     graph = Graph("C:/Users/yuryp/Downloads/test_d" + str(i) + ".txt")
-# #     start_time = time.time()
-# #     graph.alg_Dinitz()
-# #     print("test d N ", i)
-# #     print("Work time = ", time.time() - start_time, "\n")
-# #     print("max flow = ", graph.max_flow)
-# #
-# # for i in range(1, 8):
-# #     graph = Graph("C:/Users/yuryp/Downloads/test_rd0" + str(i) + ".txt")
-# #     start_time = time.time()
-# #     graph.alg_Dinitz()
-# #     print("test rd N ", i)
-# #     print("Work time = ", time.time() - start_time, "\n")
-# #     print("max flow = ", graph.max_flow)
-#
-# for i in range(1, 8):
-#     graph = Graph("C:/Users/yuryp/Downloads/test_rl0" + str(i) + ".txt")
-#     start_time = time.time()
-#     graph.alg_Dinitz()
-#     print("test rl N ", i)
-#     print("Work time = ", time.time() - start_time, "\n")
-#     print("max flow = ", graph.max_flow)
-#
-# graph = Graph("C:/Users/yuryp/Downloads/test_rl10.txt")
-# start_time = time.time()
-# graph.alg_Dinitz()
-# print("test rl N 10", )
-# print("Work time = ", time.time() - start_time, "\n")
-# print("max flow = ", graph.max_flow)
+    def dinitz_alg(self):
+        while True:  # фаза
+            layered_list, layered_reversed_list = self.bfs_with_levels()
+            if self.levels[self.V - 1] == -1:  # в сток не попасть
+                break
+            while self.V - 1 in layered_reversed_list:  # поиск всех дополняющих путей (итерации)
+                path = [self.V - 1]
+                current_flow = float('inf')
+                current = self.V - 1
+                left_clean_points = []
+                right_clean_points = []
+                while current != 0:  # поиск 1-го конкретного пути
+                    for i in layered_reversed_list[current]:
+                        if i[1] - i[2] <= current_flow:
+                            right_clean_points.append(i[0])  # проверяем тупики
+                            left_clean_points.append(current)
+                            if i[1] - i[2] < current_flow:
+                                current_flow = i[1] - i[2]
+                                right_clean_points = [i[0]]
+                                left_clean_points = [current]
+                        path.append(i[0])
+                        current = i[0]
+                        break
+                for k in layered_reversed_list[path[len(path) - 2]]:
+                    if k[0] == path[len(path) - 1]:
+                        k[2] += current_flow
+                        if k[1] - k[2] <= 0:
+                            layered_reversed_list[path[len(path) - 2]].remove(k)
+                        break
+                for j in self.list[path[len(path) - 1]]:
+                    if j[0] == path[len(path) - 2]:
+                        j[2] += current_flow
+                        break
+                for j in layered_list[path[len(path) - 1]]:
+                    if j[0] == path[len(path) - 2] and j[1] - j[2] <= 0:
+                        layered_list[path[len(path) - 1]].remove(j)
+                        break
+                for j in self.list[path[1]]:
+                    if j[0] == path[0]:
+                        j[2] += current_flow
+                        break
+                for j in layered_list[path[1]]:
+                    if j[0] == path[0] and j[1] - j[2] <= 0:
+                        layered_list[path[1]].remove(j)
+                        break
+                for k in layered_reversed_list[path[0]]:
+                    if k[0] == path[1]:
+                        k[2] += current_flow
+                        if k[1] - k[2] <= 0:
+                            layered_reversed_list[path[0]].remove(k)
+                        break
+                for i in range(1, len(path) - 2):
+                    for j in self.list[path[i+1]]:
+                        if j[0] == path[i]:
+                            j[2] += current_flow
+                            break
+                    for j in layered_list[path[i+1]]:
+                        if j[0] == path[i] and j[1] - j[2] <= 0:
+                            layered_list[path[i+1]].remove(j)
+                            break
+                    for k in self.list[path[i]]:
+                        if k[0] == path[i+1]:
+                            k[2] -= current_flow
+                            break
+                    for c in layered_reversed_list[path[i]]:
+                        if c[0] == path[i+1]:
+                            c[2] += current_flow
+                            if c[1] - c[2] <= 0:
+                                layered_reversed_list[path[i]].remove(c)
+                            break
+                    for l in layered_reversed_list[path[i+1]]:
+                        if l[0] == path[i]:
+                            l[2] -= current_flow
+                            break
+                layered_list, layered_reversed_list = self.right_clean(layered_list, layered_reversed_list, right_clean_points)
+                layered_list, layered_reversed_list = self.left_clean(layered_list, layered_reversed_list, left_clean_points)
+                self.maxflow += current_flow
