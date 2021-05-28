@@ -23,7 +23,7 @@ class App:
         self.img = ""
         self.file = ""
         self.lmbda = 1
-        self.sigma = 6
+        self.sigma = 30
         # создаем рабочую область
         self.panel = tkinter.Label(self.root, image=self.img)
         self.panel.pack(anchor='s')
