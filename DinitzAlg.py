@@ -1,15 +1,49 @@
+import graph_maker
+
+
 class Graph:
 
-    def __init__(self, table_x, table_y, table_capacity, height, width):
+    def __init__(self, table_x, table_y, table_capacity, height, width, image, k_edge):
         self.maxflow = 0
+        self.file = image
+        self.k_edge = k_edge
+        self.image = self.file.load()
         self.V = height * width + 2
+        self.width = width
+        self.height = height
         self.E = len(table_x)
+        self.table_x = table_x
+        self.table_y = table_y
         self.table_capacity = table_capacity
         edges = list(zip(table_x, table_y, table_capacity))
         self.list = {i: [] for i in range(self.V)}
         for i in edges:
             self.list[i[0]].append([i[1], i[2], 0])
         self.levels = []
+
+    def recompute_list(self, obj_pix, bck_pix, bck_prob_func, obj_prob_func):
+        print(self.list)
+        for j in obj_pix:
+            for k in self.list[0]:
+                if k[0] == j:
+                    k[1] += self.k_edge
+                    k[1] += obj_prob_func(self.image[(j - 1) // self.file.size[1], (j - 1) % self.file.size[1]], self.k_edge)
+            for k in self.list[j]:
+                if k[0] == self.E - 1:
+                    k[1] += bck_prob_func(self.image[(j - 1) // self.file.size[1], (j - 1) % self.file.size[1]], self.k_edge)
+        for j in bck_pix:
+            for k in self.list[0]:
+                if k[0] == j:
+                    print(k)
+                    k[1] += self.k_edge
+                    k[1] += obj_prob_func(self.image[(j - 1) // self.file.size[1], (j - 1) % self.file.size[1]], self.k_edge)
+                    print(k)
+            for k in self.list[j]:
+                if k[0] == self.E - 1:
+                    print(k)
+                    k[1] += bck_prob_func(self.image[(j - 1) // self.file.size[1], (j - 1) % self.file.size[1]], self.k_edge)
+                    # k[1] += self.k_edge
+                    print(k)
 
     def bfs_with_levels(self):
         self.levels = [-1] * self.V
@@ -22,7 +56,8 @@ class Graph:
         print("BFS in progress")
         while to_visit:
             current = to_visit.pop(0)
-            layered_list[current] = [v for v in self.list[current] if v[1] - v[2] > 0 and (self.levels[v[0]] < 0 or self.levels[v[0]] - self.levels[current] == 1)]
+            layered_list[current] = [v for v in self.list[current] if v[1] - v[2] > 0 and (
+                        self.levels[v[0]] < 0 or self.levels[v[0]] - self.levels[current] == 1)]
             for i in layered_list[current]:
                 self.levels[i[0]] = self.levels[current] + 1
                 layered_reverse_list[i[0]].append([current, i[1], i[2]])
@@ -80,6 +115,7 @@ class Graph:
                         path.append(i[0])
                         current = i[0]
                         break
+                print(path)
                 for k in layered_reversed_list[path[len(path) - 2]]:
                     if k[0] == path[len(path) - 1]:
                         k[2] += current_flow
@@ -109,28 +145,30 @@ class Graph:
                             layered_reversed_list[path[0]].remove(k)
                         break
                 for i in range(1, len(path) - 2):
-                    for j in self.list[path[i+1]]:
+                    for j in self.list[path[i + 1]]:
                         if j[0] == path[i]:
                             j[2] += current_flow
                             break
-                    for j in layered_list[path[i+1]]:
+                    for j in layered_list[path[i + 1]]:
                         if j[0] == path[i] and j[1] - j[2] <= 0:
-                            layered_list[path[i+1]].remove(j)
+                            layered_list[path[i + 1]].remove(j)
                             break
                     for k in self.list[path[i]]:
-                        if k[0] == path[i+1]:
+                        if k[0] == path[i + 1]:
                             k[2] -= current_flow
                             break
                     for c in layered_reversed_list[path[i]]:
-                        if c[0] == path[i+1]:
+                        if c[0] == path[i + 1]:
                             c[2] += current_flow
                             if c[1] - c[2] <= 0:
                                 layered_reversed_list[path[i]].remove(c)
                             break
-                    for l in layered_reversed_list[path[i+1]]:
+                    for l in layered_reversed_list[path[i + 1]]:
                         if l[0] == path[i]:
                             l[2] -= current_flow
                             break
-                layered_list, layered_reversed_list = self.right_clean(layered_list, layered_reversed_list, right_clean_points)
-                layered_list, layered_reversed_list = self.left_clean(layered_list, layered_reversed_list, left_clean_points)
+                layered_list, layered_reversed_list = self.right_clean(layered_list, layered_reversed_list,
+                                                                       right_clean_points)
+                layered_list, layered_reversed_list = self.left_clean(layered_list, layered_reversed_list,
+                                                                      left_clean_points)
                 self.maxflow += current_flow

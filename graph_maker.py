@@ -3,14 +3,12 @@ from PIL import Image
 
 
 def ntype_edges_weight(pix1, pix2, sigma):
-    if pix1 > pix2:
-        return int(math.exp(-(pix1 - pix2) ** 2 / (2 * sigma ** 2)))  # / np.linalg.norm(pix1 - pix2))
-    return 1
+    return int(100 * math.exp(-((pix1 - pix2) ** 2) / (2 * sigma ** 2)))
 
 
 def get_histogram_distribution(pixels_x, pixels_y, image, lambda_=1.0):
     pixels_number = len(pixels_x)
-    groups_number = 40
+    groups_number = 20
     groups = [0 for i in range(groups_number)]
     mult = groups_number / 256
     for i in range(0, pixels_number):
@@ -23,30 +21,21 @@ def get_histogram_distribution(pixels_x, pixels_y, image, lambda_=1.0):
         else:
             groups[i] = -1
 
-    def distribution(intensity):
+    def distribution(intensity, k_edge):
         """Closure function of probabilistic distribution."""
 
         nonlocal groups
         nonlocal mult
 
         intensity = math.floor(intensity * mult)
+        if groups[intensity] == -1:
+            return k_edge
         return groups[intensity]
 
     return distribution
 
 
-def k_edge(table_x, table_y, table_capacity, num, width):
-    max = 0
-    for i in range(len(table_x)):
-        if table_x[i] == num and (
-                table_y[i] == num - 1 or table_y[i] == num + 1 or table_y[i] == num + width or table_y[
-                i] == num - width):
-            if table_capacity[i] > max:
-                max = table_capacity[i]
-    return max + 1
-
-
-def make_graph(path, selected_bck_pixls_x, selected_bck_pixls_y, selected_obj_pixls_x, selected_obj_pixls_y, lmbda=1,
+def make_graph(path, selected_bck_pixls_x, selected_bck_pixls_y, selected_obj_pixls_x, selected_obj_pixls_y, lmbda=0.5,
                sigma=1):
     file = Image.open(path)
     image = file.load()
@@ -167,31 +156,34 @@ def make_graph(path, selected_bck_pixls_x, selected_bck_pixls_y, selected_obj_pi
     table_y.append(width * (height - 1))
     table_capacity.append(ntype_edges_weight(image[height - 1, width - 1], image[height - 2, width - 1], sigma))
 
+    k_edge = max(table_capacity)
+
     for i in range(height):  # задали все t-связи
         for j in range(width):
-            if (i + 1, j+1) in zip(selected_bck_pixls_x, selected_bck_pixls_y):
+            if (i + 1, j + 1) in zip(selected_bck_pixls_x, selected_bck_pixls_y):
                 table_x.append(0)
                 table_y.append(i * width + j + 1)
                 table_capacity.append(0)
-                table_capacity.append(k_edge(table_x, table_y, table_capacity, i * width + j + 1, width))
+                table_capacity.append(k_edge)
                 table_x.append(i * width + j + 1)
                 table_y.append(width * height + 1)
-            elif (i + 1, j+1) in zip(selected_obj_pixls_x, selected_obj_pixls_y):
-                table_capacity.append(k_edge(table_x, table_y, table_capacity, i * width + j + 1, width))
+            elif (i + 1, j + 1) in zip(selected_obj_pixls_x, selected_obj_pixls_y):
+                table_capacity.append(k_edge)
                 table_x.append(0)
                 table_y.append(i * width + j + 1)
                 table_x.append(i * width + j + 1)
                 table_y.append(width * height + 1)
                 table_capacity.append(0)
             else:
+                table_capacity.append(
+                    bck_prob_func(image[i, j], k_edge))
                 table_x.append(0)
                 table_y.append(i * width + j + 1)
-                table_capacity.append(obj_prob_func(image[i, j]))
+                table_capacity.append(
+                    obj_prob_func(image[i, j], k_edge))
                 table_x.append(i * width + j + 1)
                 table_y.append(width * height + 1)
-                table_capacity.append(bck_prob_func(image[i, j]))
-
-    return table_x, table_y, table_capacity, height, width
+    return table_x, table_y, table_capacity, height, width, obj_prob_func, bck_prob_func, k_edge
 
 
 def get_bwimage(w_pixels, width, height):
