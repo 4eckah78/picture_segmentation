@@ -72,7 +72,7 @@ class Graph:
         while right_check_points:
             i = right_check_points.pop()
             if i in layered_list:
-                if len(layered_list[i]) == 0:
+                if len(layered_list[i]) == 0 and i in layered_reverse_list:
                     for j in layered_reverse_list[i]:
                         layered_list[j[0]].remove([i, j[1], j[2]])  # удаление всех исходящих в удаленную вершину ребер
                         right_check_points.append(j[0])

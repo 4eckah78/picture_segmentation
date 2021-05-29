@@ -37,5 +37,5 @@ def jackar(path1, path2):
     return correct/all_pix
 
 
-print(metric_1("result_image6.jpg", "C:/Users/yuryp/Desktop/images-segments-100/banana1-100.jpg"))
-print(jackar("result_image6.jpg", "C:/Users/yuryp/Desktop/images-segments-100/banana1-100.jpg"))
+print(metric_1("result_image6.jpg", "C:/Users/yuryp/Desktop/images-segments-120/elefant-120.jpg"))
+print(jackar("result_image6.jpg", "C:/Users/yuryp/Desktop/images-segments-120/elefant-120.jpg"))
